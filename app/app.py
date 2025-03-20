@@ -12,7 +12,7 @@ app.secret_key = 'asda33443fff'
 event_queues = defaultdict(queue.Queue)
 
 def get_db():
-    conn = sqlite3.connect('db/database.db')
+    conn = sqlite3.connect('app/db/database.db')
     conn.row_factory = sqlite3.Row
     return conn
 
