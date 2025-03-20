@@ -12,7 +12,8 @@ app.secret_key = 'asda33443fff'
 event_queues = defaultdict(queue.Queue)
 
 def get_db():
-    conn = sqlite3.connect('app/db/database.db')
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    conn = sqlite3.connect(os.path.join(BASE_DIR, 'db', 'database.db'))
     conn.row_factory = sqlite3.Row
     return conn
 
