@@ -2,7 +2,7 @@ FROM python:3.11
 
 WORKDIR /app
 
-# Copia o requirements.txt se existir (se não tiver, só pula isso)
+# Copia o requirements.txt se existir
 COPY requirements.txt ./
 
 # Instala dependências Python
@@ -11,8 +11,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia o código da aplicação
 COPY . .
 
-# Exemplo de porta Django
-EXPOSE 8000
+# Expõe a porta padrão do Flask (ajuste conforme necessário)
+EXPOSE 5000
 
 # Comando de entrada
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "app.py"]
