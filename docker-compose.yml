@@ -22,7 +22,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./app/static/uploads:/app/static/uploads
+      - ./app:/app
     environment:
       - FLASK_ENV=production
     labels:
