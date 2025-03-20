@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+
+<div class="container py-4">
+    <h1 class="mb-4 text-center">Painel de Gestão</h1>
+
+    <!-- Upload Manual -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Upload Manual</h5>
+            <form action="/upload" method="POST" enctype="multipart/form-data" class="row g-2">
+                <div class="col-md-6">
+                    <input type="file" name="file" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <select name="tv_id" class="form-select" required>
+                        {% for key, value in DISPLAY_NAMES.items() %}
+                            <option value="{{ key }}">{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">Enviar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Imagens NAS -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Imagens disponíveis na NAS</h5>
+            <ul class="list-group">
+                {% for file in nas_files %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ file }}
+                        <form action="/import_nas" method="POST" class="d-flex">
+                            <input type="hidden" name="filename" value="{{ file }}">
+                            <select name="tv_id" class="form-select me-2" required>
+                                {% for key, value in DISPLAY_NAMES.items() %}
+                                    <option value="{{ key }}">{{ value }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-success">Importar</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Imagens Registadas -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Imagens Registadas por TV</h5>
+            <div class="row">
+                {% for tv in DISPLAY_NAMES.keys() %}
+                <div class="col-md-6">
+                    <h6>{{ DISPLAY_NAMES[tv] }}</h6>
+                    <ul class="list-group mb-3">
+                        {% for image in images if image.tv_id == tv %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ image.filename }}
+                                <form action="/delete/{{ image.id }}" method="POST">
+                                    <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                                </form>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Pré-visualização e Configs -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5 class="card-title">Pré-visualização e Configurações por TV</h5>
+            <div class="row">
+                {% for tv in DISPLAY_NAMES.keys() %}
+                <div class="col-md-6 mb-4 position-relative">
+                    <h6>{{ DISPLAY_NAMES[tv] }}</h6>
+
+                    <div class="ratio ratio-16x9 border mb-2">
+                        <iframe src="/player/{{ tv }}" frameborder="0"></iframe>
+                    </div>
+
+                    <form action="/update_tv_config" method="POST" class="mb-3">
+                        <input type="hidden" name="tv_id" value="{{ tv }}">
+                    
+                        <!-- Tempo por Imagem -->
+                        <div class="mb-2">
+                            <label>Tempo por imagem (segundos)</label>
+                            <input type="number" name="timer" min="1" value="{{ timers[tv] }}" class="form-control" required>
+                        </div>
+                    
+                        <!-- Tipo de Transição -->
+                        <label>Tipo de Transição:</label>
+                        <select name="transition" class="form-select mb-2">
+                            {% for option in ['none', 'fade-in', 'fade-out', 'slide-left', 'slide-up', 'zoom-in'] %}
+                                <option value="{{ option }}" {% if plugins[tv]['transition'] == option %}selected{% endif %}>
+                                    {{ option.replace('-', ' ').capitalize() }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    
+                        <!-- Duração da Transição -->
+                        <label>Duração da Transição (segundos)</label>
+                        <input type="number" name="transition_time" min="0.5" step="0.1" value="{{ plugins[tv]['transition_time'] }}" class="form-control" required>
+                    
+                        <!-- Mostrar Relógio -->
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" name="show_clock" {% if plugins[tv]['show_clock'] %}checked{% endif %}>
+                            <label class="form-check-label">Mostrar Relógio</label>
+                        </div>
+                    
+                        <!-- Mostrar Clima -->
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="show_weather" {% if plugins[tv]['show_weather'] %}checked{% endif %}>
+                            <label class="form-check-label">Mostrar Clima</label>
+                        </div>
+                    
+                        <!-- Mensagem personalizada -->
+                        <div class="mt-2">
+                            <input type="text" name="custom_message" class="form-control" placeholder="Mensagem personalizada" value="{{ plugins[tv]['custom_message'] }}">
+                        </div>
+                    
+                        <!-- Som -->
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" name="sound_enabled" {% if plugins[tv]['sound_enabled'] %}checked{% endif %}>
+                            <label class="form-check-label">Ativar som</label>
+                        </div>
+                    
+                        <button class="btn btn-sm btn-primary mt-3 w-100">Guardar Configurações</button>
+                    </form>
+                    
+
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<meta charset="UTF-8">
+<title>Player - {{ tv_id }}</title>
+<link rel="stylesheet" href="/static/css/animations.css">
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- Overlay dos plugins -->
+<div class="plugin-overlay" id="plugin-overlay" style="display:none;">
+    <div id="clock" style="display:none;"></div>
+    <div id="weather" style="display:none;">Carregando clima...</div>
+    <div id="custom-msg" style="display:none;"></div>
+</div>
+
+<!-- Slideshow -->
+<img id="slideshow-img" src="" alt="slideshow" style="display:none;">
+<video id="slideshow-video" style="display:none;" autoplay muted playsinline></video>
+
+<script>
+const tvId = "{{ tv_id }}";
+let evtSource = null;
+
+let images = [], index = 0;
+let timer = 5000; // fallback timer
+let transition = 'fade-in';
+let transition_time = 1;
+
+// Plugins config
+let showClock = false;
+let showWeather = false;
+let customMessage = '';
+let interval = null;
+let soundEnabled = false;
+
+async function fetchAllConfigs() {
+    await fetchTimer();
+    await fetchPlugins();
+    await fetchPlaylist();
+}
+
+async function startPlayer() {
+    await fetchAllConfigs();
+    updateOverlay();
+
+    if (images.length > 0) {
+        index = 0;
+        showSlide();
+    } else {
+        fallbackImage();
+    }
+}
+
+function connectSSE() {
+    evtSource = new EventSource(`/events/${tvId}`);
+
+    evtSource.onopen = () => console.log('🎯 SSE ligado com sucesso.');
+    evtSource.onerror = e => {
+        console.error('🚨 Erro na ligação SSE:', e);
+        evtSource.close();
+        setTimeout(connectSSE, 3000);
+    };
+
+    evtSource.onmessage = async function(event) {
+        console.log('📩 Evento SSE recebido:', event.data);
+        if (event.data === 'reload') {
+            await startPlayer();
+            console.log('⚡ Player atualizado via SSE!');
+        }
+    };
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    connectSSE();
+    startPlayer();
+});
+
+function updateOverlay() {
+    const overlay = document.getElementById('plugin-overlay');
+    if (!overlay) return;
+
+    overlay.style.display = (showClock || showWeather || customMessage) ? 'block' : 'none';
+
+    const clockEl = document.getElementById('clock');
+    const weatherEl = document.getElementById('weather');
+    const customMsgEl = document.getElementById('custom-msg');
+
+    if (clockEl) clockEl.style.display = showClock ? 'block' : 'none';
+    if (weatherEl) weatherEl.style.display = showWeather ? 'block' : 'none';
+    if (customMsgEl) {
+        customMsgEl.style.display = customMessage ? 'block' : 'none';
+        customMsgEl.innerText = customMessage;
+    }
+}
+
+function showSlide() {
+    const current = images[index];
+    const img = document.getElementById('slideshow-img');
+    const video = document.getElementById('slideshow-video');
+
+    img.style.display = 'none';
+    video.style.display = 'none';
+    img.className = '';
+    video.className = '';
+
+    requestAnimationFrame(() => {
+        if (current && current.type === 'image') {
+            img.src = '/static/uploads/' + current.filename + '?v=' + Date.now();
+            img.onerror = () => fallbackImage();
+
+            img.style.display = 'block';
+            img.classList.remove(transition);
+            void img.offsetWidth;
+            img.classList.add(transition);
+
+            clearTimeout(interval);
+            interval = setTimeout(nextSlide, timer);
+        }
+        else if (current && current.type === 'video') {
+            video.src = '/static/uploads/' + current.filename + '?v=' + Date.now();
+            video.onerror = () => fallbackImage();
+
+            video.load();
+            video.play().catch(() => fallbackImage());
+            video.style.display = 'block';
+
+            video.classList.remove(transition);
+            void video.offsetWidth;
+            video.classList.add(transition);
+
+            video.onended = nextSlide;
+        }
+        else {
+            fallbackImage();
+        }
+    });
+}
+
+function fallbackImage() {
+    const img = document.getElementById('slideshow-img');
+    const video = document.getElementById('slideshow-video');
+    video.style.display = 'none';
+    img.src = '/static/defaults/fallback.jpg?v=' + Date.now();
+    img.style.display = 'block';
+}
+
+function nextSlide() {
+    index = (index + 1) % images.length;
+    showSlide();
+}
+
+async function fetchPlugins() {
+    const res = await fetch(`/get_plugins/${tvId}?v=${Date.now()}`);
+    const data = await res.json();
+
+    transition = data.transition || 'fade-in';
+    transition_time = parseFloat(data.transition_time) || 1;
+    soundEnabled = Boolean(data.sound_enabled);
+    showClock = Boolean(data.show_clock);
+    showWeather = Boolean(data.show_weather);
+    customMessage = data.custom_message || '';
+
+    updateOverlay();
+    if (showWeather) fetchWeather();
+
+    document.documentElement.style.setProperty('--transition-time', `${transition_time}s`);
+
+    console.log("Plugins atualizados:", data);
+}
+
+async function fetchWeather() {
+    const weatherEl = document.getElementById('weather');
+    if (!weatherEl) return;
+
+    try {
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=39.71&longitude=-8.3029&current_weather=true');
+        const data = await res.json();
+        weatherEl.innerText = `Ferreira do Zêzere: ${data.current_weather.temperature}°C`;
+    } catch (e) {
+        weatherEl.innerText = 'Erro ao obter clima';
+    }
+}
+
+async function fetchPlaylist() {
+    const res = await fetch(`/playlist/${tvId}?v=${Date.now()}`);
+    images = await res.json();
+    console.log("Playlist atualizada:", images);
+
+    if (images.length === 0) {
+        fallbackImage();
+    } else {
+        index = 0;
+        showSlide();
+    }
+}
+
+async function fetchTimer() {
+    const res = await fetch(`/get_timer/${tvId}?v=${Date.now()}`);
+    const data = await res.json();
+    timer = data.timer * 1000;
+    console.log("Timer atualizado:", timer);
+}
+
+setInterval(() => {
+    const clockEl = document.getElementById('clock');
+    if (showClock && clockEl) {
+        const now = new Date();
+        clockEl.innerText = now.toLocaleTimeString();
+    }
+}, 1000);
+</script>
+
+</body>
+</html>

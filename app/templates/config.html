@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Configurações Gerais{% endblock %}
+{% block content %}
+<h3>Configurações Gerais</h3>
+    <form method="POST">
+        <div class="mb-3">
+            <label>Caminho da NAS:</label>
+            <input type="text" name="nas_path" class="form-control" value="{{ config['nas_path'] }}">
+        </div>
+        <div class="mb-3">
+            <label>Diretório de Upload:</label>
+            <input type="text" name="upload_path" class="form-control" value="{{ config['upload_path'] }}">
+        </div>
+        <div class="mb-3">
+            <label>Utilizador do Admin:</label>
+            <input type="text" name="admin_user" class="form-control" value="{{ config['admin_user'] }}">
+        </div>
+        <div class="mb-3">
+            <label>Senha do Admin:</label>
+            <input type="password" name="admin_password" class="form-control" value="{{ config['admin_password'] }}">
+        </div>
+        <button type="submit" class="btn btn-success">Guardar</button>
+    </form>
+{% endblock %}
