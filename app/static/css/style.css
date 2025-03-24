@@ -5,8 +5,21 @@ body {
     background: black;
     overflow: hidden;
 }
+body.preview-mode .fallback-overlay-box {
+    transform: translate(-50%, -50%) scale(0.8); /* ou outro valor para reduzir */
+}
+
+body.preview-mode .fallback-overlay-box h1 {
+    font-size: 1.8rem;
+}
+
+body.preview-mode .fallback-overlay-box h3 {
+    font-size: 1rem;
+}
 
 #slideshow-img, #slideshow-video {
+    position: relative;
+    z-index: 1;
     width: 100%;
     height: 100vh;
     object-fit: cover;
@@ -47,22 +60,88 @@ body {
 
 #custom-msg {
     position: absolute;
-    bottom: 20px;
+    bottom: 250px;
     width: 100%;
     text-align: center;
-    font-size: 1.5rem;
-    background: rgba(0, 0, 0, 0.4);
+    font-size: 3.5rem;
+    color: black;
+    /* background: rgba(0, 0, 0, 0.4); */
     padding: 10px;
 }
 
 /* Fallback styling */
-.fallback {
+.fallback-content {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     color: white;
-    height: 100vh;
-    background: black;
+}
+
+.fallback-content h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.fallback-content h3 {
+    font-size: 1.5rem;
+    font-weight: normal;
+}
+.fallback-overlay-text {
+    position: absolute;
+    bottom: 10%;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    color: white;
+}
+
+.fallback-overlay-text h1 {
+    font-size: 3rem;
+    margin: 0;
+}
+
+.fallback-overlay-text h3 {
+    font-size: 1.5rem;
+    font-weight: normal;
+    margin: 0;
+}
+.fallback-overlay-box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: black;
+    z-index: 1000;
+    padding: 20px;
+}
+
+/* Logo */
+.fallback-overlay-box img#company-logo {
+    max-height: 80px;
+    margin-bottom: 20px;
+}
+
+/* Company Name */
+.fallback-overlay-box h1 {
+    font-size: 2.5rem;
+    margin: 0;
+    font-weight: bold;
+}
+
+/* People Names */
+.fallback-overlay-box h3 {
+    font-size: 1.3rem;
+    margin-top: auto;
+    margin-bottom: 0;
+    padding-top: 30px; /* este valor vai empurrar o h3 mais para baixo */
+    font-weight: normal;
 }
 
 h2 {

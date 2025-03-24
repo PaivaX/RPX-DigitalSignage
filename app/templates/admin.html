@@ -7,8 +7,10 @@
 
     <!-- Upload Manual -->
     <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">📤 Upload Manual</h5>
+        </div>
         <div class="card-body">
-            <h5 class="card-title">Upload Manual</h5>
             <form action="/upload" method="POST" enctype="multipart/form-data" class="row g-2">
                 <div class="col-md-6">
                     <input type="file" name="file" class="form-control" required>
@@ -29,8 +31,10 @@
 
     <!-- Imagens NAS -->
     <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">📂 Imagens disponíveis na NAS</h5>
+        </div>
         <div class="card-body">
-            <h5 class="card-title">Imagens disponíveis na NAS</h5>
             <ul class="list-group">
                 {% for file in nas_files %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -50,29 +54,85 @@
         </div>
     </div>
 
-    <!-- Imagens Registadas -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Imagens Registadas por TV</h5>
-            <div class="row">
-                {% for tv in DISPLAY_NAMES.keys() %}
-                <div class="col-md-6">
-                    <h6>{{ DISPLAY_NAMES[tv] }}</h6>
-                    <ul class="list-group mb-3">
-                        {% for image in images if image.tv_id == tv %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ image.filename }}
-                                <form action="/delete/{{ image.id }}" method="POST">
-                                    <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
-                                </form>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
+<!-- Biblioteca de Conteúdos já carregados -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">📚 Biblioteca de Conteúdos</h5>
+    </div>
+    <div class="card-body">
+        {% if static_library %}
+            <ul class="list-group">
+                {% for item in static_library %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ item.filename }}</strong> ({{ item.tipo }})
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#previewModal{{ item.id }}" class="ms-2">👁 Ver</a>
+                        </div>
+                        <form action="/add_static_to_tv" method="POST" class="d-flex">
+                            <input type="hidden" name="file_id" value="{{ item.id }}">
+                            <select name="tv_id" class="form-select me-2" required style="max-width: 140px;">
+                                {% for key, value in DISPLAY_NAMES.items() %}
+                                    <option value="{{ key }}">{{ value }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-primary">Adicionar à TV</button>
+                        </form>
+                    </li>
+
+                    <!-- Modal -->
+                    <div class="modal fade" id="previewModal{{ item.id }}" tabindex="-1" aria-labelledby="previewModalLabel{{ item.id }}" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="previewModalLabel{{ item.id }}">Pré-visualização - {{ item.filename }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                                </div>
+                                <div class="modal-body text-center">
+                                    {% if item.tipo == 'image' %}
+                                        <img src="/static/library/{{ item.filename }}" alt="{{ item.filename }}" class="img-fluid">
+                                    {% elif item.tipo == 'video' %}
+                                        <video controls style="max-width: 100%; max-height: 70vh;">
+                                            <source src="/static/library/{{ item.filename }}" type="video/mp4">
+                                            O seu navegador não suporta vídeos.
+                                        </video>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">Nenhum conteúdo adicionado à biblioteca ainda.</p>
+        {% endif %}
+    </div>
+</div>
+
+ <!-- Imagens Registadas -->
+ <div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">🖼️ Imagens Registadas por TV</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for tv in DISPLAY_NAMES.keys() %}
+            <div class="col-md-6">
+                <h6>{{ DISPLAY_NAMES[tv] }}</h6>
+                <ul class="list-group mb-3">
+                    {% for image in images if image.tv_id == tv %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ image.filename }}
+                            <form action="/delete/{{ image.id }}" method="POST" onsubmit="return handleDelete('{{ tv }}', this)">
+                                <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                </ul>
             </div>
+            {% endfor %}
         </div>
     </div>
+</div>
 
     <!-- Pré-visualização e Configs -->
     <div class="card mt-4">
@@ -84,16 +144,16 @@
                     <h6>{{ DISPLAY_NAMES[tv] }}</h6>
 
                     <div class="ratio ratio-16x9 border mb-2">
-                        <iframe src="/player/{{ tv }}" frameborder="0"></iframe>
+                        <iframe src="/player/{{ tv }}?preview=1" frameborder="0" style="width: 100%; height: 300px;"></iframe>
                     </div>
 
-                    <form action="/update_tv_config" method="POST" class="mb-3">
+                    <form action="/update_tv_config" method="POST" enctype="multipart/form-data" class="mb-3">
                         <input type="hidden" name="tv_id" value="{{ tv }}">
                     
                         <!-- Tempo por Imagem -->
                         <div class="mb-2">
                             <label>Tempo por imagem (segundos)</label>
-                            <input type="number" name="timer" min="1" value="{{ timers[tv] }}" class="form-control" required>
+                            <input type="number" name="timer" min="1" value="{{plugins[tv]['timer'] or 500 }}" class="form-control" required>
                         </div>
                     
                         <!-- Tipo de Transição -->
@@ -132,10 +192,60 @@
                             <input class="form-check-input" type="checkbox" name="sound_enabled" {% if plugins[tv]['sound_enabled'] %}checked{% endif %}>
                             <label class="form-check-label">Ativar som</label>
                         </div>
-                    
+                        
+
+                       <!-- Collapse -->
+                        <div class="mb-2">
+                            <a class="btn btn-outline-secondary w-100 mb-2" data-bs-toggle="collapse" href="#fallbackCollapse{{ tv }}" role="button" aria-expanded="false" aria-controls="fallbackCollapse{{ tv }}">
+                                ⚙️ Imagem Personalizada
+                            </a>
+                            <div class="collapse" id="fallbackCollapse{{ tv }}">
+                                <div class="card card-body">
+
+                                    <!-- Idioma -->
+                                    <div class="mb-2">
+                                        <label>Idioma da Imagem</label><br>
+                                        {% for lang in ['PT', 'EN', 'ES', 'FR'] %}
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="radio" name="imagem_lang" value="{{ lang }}" {% if plugins[tv]['imagem_lang'] == lang %}checked{% endif %}>
+                                                <label class="form-check-label">{{ lang }}</label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+
+                                    <!-- Nome da Empresa -->
+                                    <div class="mb-2">
+                                        <label>Nome da Empresa</label>
+                                        <input type="text" name="company_name" class="form-control" value="{{ plugins[tv]['company_name'] or '' }}">
+                                    </div>
+
+                                    <!-- Nomes das Pessoas -->
+                                    <div class="mb-2">
+                                        <label>Nomes das Pessoas</label>
+                                        <input type="text" name="people_names" class="form-control" value="{{ plugins[tv]['people_names'] or '' }}">
+                                    </div>
+
+                                    <!-- Logo -->
+                                    <div class="mb-2">
+                                        <label>Carregar novo logotipo</label>
+                                        <input type="file" name="logo" class="form-control">
+
+                                        {% if plugins[tv]['logo_path'] %}
+                                            <div class="mt-2">
+                                                <img src="/static/uploads/{{ plugins[tv]['logo_path'] }}" alt="logo" style="max-height: 80px; background: #f8f9fa; border: 1px solid #ddd; padding: 5px;">
+                                            </div>
+                                            <div class="form-check mt-2">
+                                                <input class="form-check-input" type="checkbox" name="remove_logo" value="1">
+                                                <label class="form-check-label">Remover logotipo atual</label>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <button class="btn btn-sm btn-primary mt-3 w-100">Guardar Configurações</button>
                     </form>
-                    
 
                 </div>
                 {% endfor %}
@@ -144,4 +254,33 @@
     </div>
 
 </div>
+
+{% if request.args.get('removed') %}
+<script>
+    window.onload = () => {
+        const toast = new bootstrap.Toast(document.getElementById('toastSuccess'));
+        toast.show();
+    }
+
+    function handleDelete(tv_id, form) {
+        const iframe = document.querySelector(`iframe[src*="/player/${tv_id}"]`);
+        if (iframe) {
+            // Envia comando ao iframe
+            iframe.contentWindow.postMessage('force-reload', window.location.origin);
+    
+            // Dá tempo ao player para descarregar
+            setTimeout(() => {
+                form.submit();
+            }, 300); // pequeno delay para garantir que o vídeo foi parado
+        } else {
+            form.submit();
+        }
+        return false;
+    }
+    
+    
+    
+</script>
+{% endif %}
+
 {% endblock %}

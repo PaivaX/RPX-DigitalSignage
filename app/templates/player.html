@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="/static/css/animations.css">
 <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
+<body class="{{ 'preview-mode' if request.args.get('preview') else '' }}">
 
 <!-- Overlay dos plugins -->
 <div class="plugin-overlay" id="plugin-overlay" style="display:none;">
@@ -17,10 +17,33 @@
     <div id="weather" style="display:none;">Carregando clima...</div>
     <div id="custom-msg" style="display:none;"></div>
 </div>
+<!-- Fallback com logotipo e texto -->
+<div id="fallback-screen" class="fallback" style="display: none;">
+    <div class="fallback-content text-center">
+        <img id="fallback-img" src="" alt="fallback" style="max-width: 100%; max-height: 100%;">
+
+        <!-- Overlay na "caixa branca" -->
+        <div class="fallback-overlay-box">
+            <img id="company-logo" src="" alt="logo" class="mb-2">
+            <h1 id="company-name"></h1>
+            <h3 id="people-names"></h3>
+        </div>
+    </div>
+</div>
 
 <!-- Slideshow -->
 <img id="slideshow-img" src="" alt="slideshow" style="display:none;">
-<video id="slideshow-video" style="display:none;" autoplay muted playsinline></video>
+<video id="slideshow-video" style="display:none;" autoplay muted playsinline>
+    <source id="video-source" src="" type="">
+</video>
+<div id="loading-spinner" style="display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 999;">
+    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+
+
+
 
 <script>
 const tvId = "{{ tv_id }}";
@@ -99,55 +122,93 @@ function updateOverlay() {
 }
 
 function showSlide() {
+    const fallbackEl = document.getElementById('fallback-screen');
+    fallbackEl.style.display = 'none';
+
     const current = images[index];
     const img = document.getElementById('slideshow-img');
     const video = document.getElementById('slideshow-video');
+    const source = document.getElementById('video-source');
+    const spinner = document.getElementById('loading-spinner');
 
     img.style.display = 'none';
     video.style.display = 'none';
     img.className = '';
     video.className = '';
+    spinner.style.display = 'none';
 
-    requestAnimationFrame(() => {
-        if (current && current.type === 'image') {
-            img.src = '/static/uploads/' + current.filename + '?v=' + Date.now();
-            img.onerror = () => fallbackImage();
+    if (!current) {
+        fallbackImage();
+        return;
+    }
 
-            img.style.display = 'block';
-            img.classList.remove(transition);
-            void img.offsetWidth;
-            img.classList.add(transition);
+    if (current.type === 'image') {
+        img.src = '/static/uploads/' + current.filename + '?v=' + Date.now();
+        img.onerror = () => fallbackImage();
+        img.style.display = 'block';
+        img.classList.add(transition);
 
-            clearTimeout(interval);
-            interval = setTimeout(nextSlide, timer);
-        }
-        else if (current && current.type === 'video') {
-            video.src = '/static/uploads/' + current.filename + '?v=' + Date.now();
-            video.onerror = () => fallbackImage();
+        clearTimeout(interval);
+        interval = setTimeout(nextSlide, timer);
+    }
+    else if (current.type === 'video') {
+        const ext = current.filename.split('.').pop().toLowerCase();
+        const mime = (ext === 'webm') ? 'video/webm' : 'video/mp4';
+    
+        source.src = '/static/uploads/' + current.filename + '?v=' + Date.now();
+        source.type = mime;
+    
+        spinner.style.display = 'block'; // Mostra o spinner
+        video.style.display = 'none'; // Só vai aparecer depois do canplay
 
-            video.load();
-            video.play().catch(() => fallbackImage());
-            video.style.display = 'block';
-
+        video.muted = !soundEnabled; // Aqui é que ativa ou desativa som!
+        video.load();
+    
+        video.oncanplay = () => {
+            spinner.style.display = 'none';
+            video.style.display = 'block'; // Só agora mostra o vídeo
             video.classList.remove(transition);
             void video.offsetWidth;
             video.classList.add(transition);
-
-            video.onended = nextSlide;
-        }
-        else {
-            fallbackImage();
-        }
-    });
+    
+            video.play().catch(err => {
+                console.warn('⚠ Autoplay bloqueado ou erro no play:', err);
+                fallbackImage();
+            });
+        };
+    
+        video.onended = nextSlide;
+    }    
+    else {
+        fallbackImage();
+    }
 }
+
 
 function fallbackImage() {
-    const img = document.getElementById('slideshow-img');
-    const video = document.getElementById('slideshow-video');
-    video.style.display = 'none';
-    img.src = '/static/defaults/fallback.jpg?v=' + Date.now();
-    img.style.display = 'block';
+    const fallbackEl = document.getElementById('fallback-screen');
+    const imgEl = document.getElementById('fallback-img');
+    document.getElementById('slideshow-img').style.display = 'none';
+    document.getElementById('slideshow-video').style.display = 'none';
+
+    fetch(`/get_imagem_lang/${tvId}`).then(r => r.json()).then(data => {
+        const lang = data.lang || 'PT';
+        imgEl.src = `/static/defaults/fundo_${lang}.png?v=${Date.now()}`;
+        fallbackEl.style.display = 'flex';
+    });
+
+    // Carregar info da empresa e pessoas
+    fetch(`/get_fallback/${tvId}`).then(r => r.json()).then(data => {
+        document.getElementById('company-name').innerText = data.company_name || '';
+        document.getElementById('people-names').innerText = data.people_names || '';
+    
+        const logo = document.getElementById('company-logo');
+        logo.src = data.logo || ''; 
+        logo.style.display = data.logo ? 'block' : 'none';
+    });
+    
 }
+
 
 function nextSlide() {
     index = (index + 1) % images.length;
@@ -213,6 +274,34 @@ setInterval(() => {
         clockEl.innerText = now.toLocaleTimeString();
     }
 }, 1000);
+
+
+window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+
+    if (event.data === 'force-reload') {
+        console.log('🔄 Force reload recebido');
+        
+        // Stop & unload video
+        const video = document.getElementById('slideshow-video');
+        const source = document.getElementById('video-source');
+
+        if (video) {
+            video.pause();
+            video.removeAttribute('src');
+            source.removeAttribute('src');
+            video.load();
+        }
+
+        // Espera antes de recomeçar
+        setTimeout(() => {
+            index = 0;
+            fetchPlaylist();
+        }, 200);
+    }
+});
+
+
 </script>
 
 </body>

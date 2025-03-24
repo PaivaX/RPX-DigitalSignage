@@ -1,24 +1,121 @@
 {% extends "base.html" %}
 {% block title %}Configurações Gerais{% endblock %}
 {% block content %}
-<h3>Configurações Gerais</h3>
-    <form method="POST">
-        <div class="mb-3">
-            <label>Caminho da NAS:</label>
-            <input type="text" name="nas_path" class="form-control" value="{{ config['nas_path'] }}">
+
+<div class="container py-4">
+    <!-- Configurações Gerais -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">⚙️ Configurações Gerais</h5>
         </div>
-        <div class="mb-3">
-            <label>Diretório de Upload:</label>
-            <input type="text" name="upload_path" class="form-control" value="{{ config['upload_path'] }}">
+        <div class="card-body">
+            <form method="POST" class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Caminho da NAS:</label>
+                    <input type="text" name="nas_path" class="form-control" value="{{ config['nas_path'] }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Diretório de Upload:</label>
+                    <input type="text" name="upload_path" class="form-control" value="{{ config['upload_path'] }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Utilizador do Admin:</label>
+                    <input type="text" name="admin_user" class="form-control" value="{{ config['admin_user'] }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Senha do Admin:</label>
+                    <input type="password" name="admin_password" class="form-control" value="{{ config['admin_password'] }}">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success w-100">Guardar</button>
+                </div>
+            </form>
         </div>
-        <div class="mb-3">
-            <label>Utilizador do Admin:</label>
-            <input type="text" name="admin_user" class="form-control" value="{{ config['admin_user'] }}">
+    </div>
+
+    <!-- Upload para Biblioteca -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">➕ Adicionar à Biblioteca</h5>
         </div>
-        <div class="mb-3">
-            <label>Senha do Admin:</label>
-            <input type="password" name="admin_password" class="form-control" value="{{ config['admin_password'] }}">
+        <div class="card-body">
+            <form action="/upload_static_library" method="POST" enctype="multipart/form-data" class="row g-2">
+                <div class="col-md-6">
+                    <input type="file" name="file" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <select name="tipo" class="form-select" required>
+                        <option value="image">Imagem</option>
+                        <option value="video">Vídeo</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">Adicionar</button>
+                </div>
+            </form>
         </div>
-        <button type="submit" class="btn btn-success">Guardar</button>
-    </form>
+    </div>
+
+    <!-- Biblioteca de Conteúdos -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📚 Biblioteca de Conteúdos</h5>
+        </div>
+        <div class="card-body">
+            {% if static_library %}
+                <ul class="list-group">
+                    {% for item in static_library %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ item.filename }}</strong> ({{ item.tipo }})
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#previewModal{{ item.id }}" class="ms-2">👁 Ver</a>
+                            </div>
+                            <div class="d-flex">
+                                <!-- Adicionar à TV -->
+                                <form action="/add_static_to_tv" method="POST" class="d-flex me-2">
+                                    <input type="hidden" name="file_id" value="{{ item.id }}">
+                                    <select name="tv_id" class="form-select me-2" required style="max-width: 140px;">
+                                        {% for key, value in DISPLAY_NAMES.items() %}
+                                            <option value="{{ key }}">{{ value }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-primary">Adicionar</button>
+                                </form>
+                                <!-- Apagar -->
+                                <form action="/delete_library_item/{{ item.id }}" method="POST" onsubmit="return confirm('Tem a certeza que deseja remover este item da biblioteca?')">
+                                    <button type="submit" class="btn btn-sm btn-danger">🗑</button>
+                                </form>
+                            </div>
+                        </li>
+
+                        <!-- Modal Preview -->
+                        <div class="modal fade" id="previewModal{{ item.id }}" tabindex="-1" aria-labelledby="previewModalLabel{{ item.id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="previewModalLabel{{ item.id }}">Pré-visualização - {{ item.filename }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                                    </div>
+                                    <div class="modal-body text-center">
+                                        {% if item.tipo == 'image' %}
+                                            <img src="/static/library/{{ item.filename }}" alt="{{ item.filename }}" class="img-fluid">
+                                        {% elif item.tipo == 'video' %}
+                                            <video controls style="max-width: 100%; max-height: 70vh;">
+                                                <source src="/static/library/{{ item.filename }}" type="video/mp4">
+                                                O seu navegador não suporta vídeos.
+                                            </video>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">Nenhum conteúdo adicionado à biblioteca ainda.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
 {% endblock %}
