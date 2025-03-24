@@ -24,6 +24,7 @@ services:
     volumes:
       - ./app:/app
       - ./app/db:/app/db
+      - ./app/static:/app/static
     environment:
       - FLASK_ENV=production
     labels:
