@@ -141,7 +141,12 @@
             <div class="row">
                 {% for tv in DISPLAY_NAMES.keys() %}
                 <div class="col-md-6 mb-4 position-relative">
-                    <h6>{{ DISPLAY_NAMES[tv] }}</h6>
+                    <h6 class="d-flex justify-content-between align-items-center">
+                        {{ DISPLAY_NAMES[tv] }}
+                        <a href="{{ url_for('player', tv_id=tv) }}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                            Realtime
+                        </a>
+                    </h6>                    
 
                     <div class="ratio ratio-16x9 border mb-2">
                         <iframe src="/player/{{ tv }}?preview=1" frameborder="0" style="width: 100%; height: 300px;"></iframe>
@@ -234,6 +239,12 @@
                                             <div class="mt-2">
                                                 <img src="/static/uploads/{{ plugins[tv]['logo_path'] }}" alt="logo" style="max-height: 80px; background: #f8f9fa; border: 1px solid #ddd; padding: 5px;">
                                             </div>
+                                            <!-- Tamanho do Logotipo -->
+                                            <div class="mb-2">
+                                                <label>Tamanho do Logotipo (% da largura)</label>
+                                                <input type="number" name="logo_size" class="form-control" min="5" max="100" step="1" value="{{ plugins[tv]['logo_size'] or 30 }}">
+                                            </div>
+
                                             <div class="form-check mt-2">
                                                 <input class="form-check-input" type="checkbox" name="remove_logo" value="1">
                                                 <label class="form-check-label">Remover logotipo atual</label>
@@ -246,6 +257,17 @@
 
                         <button class="btn btn-sm btn-primary mt-3 w-100">Guardar Configurações</button>
                     </form>
+
+                    <!-- Seleção de Template -->
+                    <div class="mb-2">
+                        <label>Template</label>
+                        <select name="template_id" class="form-select">
+                            <option value="">Sem Template</option>
+                            {% for tpl in templates %}
+                                <option value="{{ tpl.id }}" {% if plugins[tv]['template_id'] == tpl.id %}selected{% endif %}>{{ tpl.nome }} ({{ tpl.tipo }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
                 </div>
                 {% endfor %}

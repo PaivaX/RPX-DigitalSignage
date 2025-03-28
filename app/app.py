@@ -40,7 +40,9 @@ def init_db():
             company_name TEXT DEFAULT '',
             people_names TEXT DEFAULT '',
             logo_path TEXT DEFAULT '',
-            imagem_lang TEXT DEFAULT 'PT'
+            imagem_lang TEXT DEFAULT 'PT',
+            logo_size INTEGER DEFAULT 30,
+            template_id INTEGER REFERENCES templates(id)
         )''')
         conn.execute('''CREATE TABLE IF NOT EXISTS config (
             id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -55,6 +57,15 @@ def init_db():
                 tipo TEXT CHECK(tipo IN ('image', 'video')) NOT NULL,
                 descricao TEXT DEFAULT ''
             )''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS templates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL,
+                tipo TEXT CHECK(tipo IN ('weather-clock', 'full-screen', 'custom')) DEFAULT 'full-screen',
+                ativo INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                template_path TEXT DEFAULT ''
+            );
+            ''')
 
         # Se não existe config, insere
         cfg = conn.execute('SELECT * FROM config WHERE id = 1').fetchone()
@@ -161,8 +172,32 @@ def config():
 
     config_db = conn.execute('SELECT * FROM config WHERE id = 1').fetchone()
     static_items = conn.execute('SELECT * FROM static_library').fetchall()
+    templates = conn.execute('SELECT * FROM templates').fetchall()
+    
     conn.close()
-    return render_template('config.html', config=config_db, static_library=static_items, DISPLAY_NAMES=DISPLAY_NAMES)
+    return render_template('config.html', config=config_db, static_library=static_items, DISPLAY_NAMES=DISPLAY_NAMES, templates=templates)
+
+@app.route('/add_template', methods=['POST'])
+def add_template():
+    nome = request.form['nome']
+    tipo = request.form['tipo']
+
+    conn = get_db()
+    with conn:
+        conn.execute('''
+            INSERT INTO templates (nome, tipo) VALUES (?, ?)
+        ''', (nome, tipo))
+    conn.close()
+    return redirect(url_for('config', msg='Template criado com sucesso!', type='success'))
+
+
+@app.route('/delete_template/<int:template_id>', methods=['POST'])
+def delete_template(template_id):
+    conn = get_db()
+    with conn:
+        conn.execute('DELETE FROM templates WHERE id = ?', (template_id,))
+    return redirect(url_for('config', msg='Template apagado.', type='warning'))
+
 
 # ------------------- ROTA SSE (EVENTSOURCE) ---------------
 @app.route('/events/<tv_id>')
@@ -194,6 +229,9 @@ def admin():
 
     # Carrega biblioteca estática
     static_library = conn.execute('SELECT * FROM static_library').fetchall()
+    
+    templates = conn.execute('SELECT * FROM templates').fetchall()
+
     
     # Garante que cada TV tem um registo em plugins (com todos os campos novos)
     for tv in DISPLAY_NAMES.keys():
@@ -236,7 +274,8 @@ def admin():
         plugins=plugins_dict,
         DISPLAY_NAMES=DISPLAY_NAMES,
         nas_files=nas_files,
-        static_library=static_library
+        static_library=static_library,
+        templates=templates
     )
     
 @app.route('/delete_library_item/<int:item_id>', methods=['POST'])
@@ -396,7 +435,11 @@ def upload_static_library():
 # ------------------- PLAYER E PLAYLIST ----------------
 @app.route('/player/<tv_id>')
 def player(tv_id):
-    return render_template('player.html', tv_id=tv_id)
+    conn = get_db()
+    plugin = conn.execute('SELECT * FROM plugins WHERE tv_id = ?', (tv_id,)).fetchone()
+    conn.close()
+    
+    return render_template('player.html', tv_id=tv_id, plugin=plugin)
 
 @app.route('/playlist/<tv_id>')
 def playlist(tv_id):
@@ -439,6 +482,9 @@ def update_tv_config():
     people_names = request.form.get('people_names', '')
     imagem_lang = request.form.get('imagem_lang', 'PT')
     remove_logo = request.form.get('remove_logo')
+    logo_size = int(request.form.get('logo_size') or 30)
+    template_id = request.form.get('template_id') or None
+
 
     print(f"[DEBUG] Dados recebidos - TV: {tv_id}, Lang: {imagem_lang}")
 
@@ -479,9 +525,9 @@ def update_tv_config():
                 INSERT INTO plugins (
                     tv_id, show_clock, show_weather, custom_message, 
                     transition, transition_time, sound_enabled, 
-                    company_name, people_names, logo_path, imagem_lang, timer
+                    company_name, people_names, logo_path, imagem_lang, timer, logo_size, template_id
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(tv_id) DO UPDATE SET
                     show_clock = excluded.show_clock,
                     show_weather = excluded.show_weather,
@@ -493,8 +539,10 @@ def update_tv_config():
                     people_names = excluded.people_names,
                     logo_path = excluded.logo_path,
                     imagem_lang = excluded.imagem_lang,
-                    timer = excluded.timer
-            ''', (tv_id, show_clock, show_weather, custom_message, transition, transition_time, sound_enabled, company_name, people_names, final_logo, imagem_lang, timer))
+                    timer = excluded.timer,
+                    logo_size = excluded.logo_size,
+                    template_id = excluded.template_id
+            ''', (tv_id, show_clock, show_weather, custom_message, transition, transition_time, sound_enabled, company_name, people_names, final_logo, imagem_lang, timer, logo_size, template_id))
 
         print("[✔] Configurações atualizadas no BD")
         event_queues[tv_id].put('reload')

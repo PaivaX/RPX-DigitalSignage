@@ -8,6 +8,7 @@
 <title>Player - {{ tv_id }}</title>
 <link rel="stylesheet" href="/static/css/animations.css">
 <link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body class="{{ 'preview-mode' if request.args.get('preview') else '' }}">
 
@@ -24,7 +25,7 @@
 
         <!-- Overlay na "caixa branca" -->
         <div class="fallback-overlay-box">
-            <img id="company-logo" src="" alt="logo" class="mb-2">
+            <img id="company-logo" src="" alt="logo" class="mb-2" style="max-width: {{ plugin['logo_size'] }}%;">
             <h1 id="company-name"></h1>
             <h3 id="people-names"></h3>
         </div>
@@ -93,6 +94,7 @@ function connectSSE() {
         console.log('📩 Evento SSE recebido:', event.data);
         if (event.data === 'reload') {
             await startPlayer();
+            window.location.reload();
             console.log('⚡ Player atualizado via SSE!');
         }
     };

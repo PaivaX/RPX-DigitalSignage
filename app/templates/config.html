@@ -116,6 +116,52 @@
             {% endif %}
         </div>
     </div>
+    <!-- Gestão de Templates -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">🎨 Templates Disponíveis</h5>
+    </div>
+    <div class="card-body">
+        <form action="/add_template" method="POST" class="row g-2 mb-3">
+            <div class="col-md-5">
+                <input type="text" name="nome" class="form-control" placeholder="Nome do Template" required>
+            </div>
+            <div class="col-md-4">
+                <select name="tipo" class="form-select" required>
+                    <option value="weather-clock">Weather + Clock</option>
+                    <option value="full-screen">Full Screen</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100">Criar Template</button>
+            </div>
+        </form>
+
+        {% if templates %}
+        <ul class="list-group">
+            {% for tpl in templates %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ tpl.nome }} ({{ tpl.tipo }})
+                    <form action="/add_template" method="POST" class="d-flex mb-3">
+                        <input type="text" name="nome" class="form-control me-2" placeholder="Nome do Template" required>
+                        <select name="tipo" class="form-select me-2" required>
+                            <option value="weather-clock">Weather + Clock</option>
+                            <option value="full-screen">Full Screen</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <input type="text" name="template_path" class="form-control me-2" placeholder="file HTML(ex: weather_clock.html)">
+                        <button type="submit" class="btn btn-primary">Criar</button>
+                    </form>                    
+                </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted">Nenhum template criado ainda.</p>
+        {% endif %}
+    </div>
+</div>
+
 </div>
 
 {% endblock %}

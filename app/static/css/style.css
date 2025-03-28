@@ -16,6 +16,9 @@ body.preview-mode .fallback-overlay-box h1 {
 body.preview-mode .fallback-overlay-box h3 {
     font-size: 1rem;
 }
+body.preview-mode .fallback-overlay-box img#company-logo {
+    max-height: 80px; /* preview reduzido para caber no iframe */
+}
 
 #slideshow-img, #slideshow-video {
     position: relative;
@@ -101,6 +104,7 @@ body.preview-mode .fallback-overlay-box h3 {
     margin: 0;
 }
 
+
 .fallback-overlay-text h3 {
     font-size: 1.5rem;
     font-weight: normal;
@@ -112,7 +116,7 @@ body.preview-mode .fallback-overlay-box h3 {
     left: 50%;
     transform: translate(-50%, -50%);
     width: 70%;
-    max-width: 600px;
+    max-width: 800px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -124,12 +128,19 @@ body.preview-mode .fallback-overlay-box h3 {
 
 /* Logo */
 .fallback-overlay-box img#company-logo {
-    max-height: 80px;
     margin-bottom: 20px;
+    height: auto;
+    width: auto;
+    max-width: 80%;     /* evita overflow horizontal */
+    max-height: 120px;  /* respeita altura máxima da box */
+    object-fit: contain;
 }
+
 
 /* Company Name */
 .fallback-overlay-box h1 {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
     font-size: 2.5rem;
     margin: 0;
     font-weight: bold;
@@ -137,7 +148,7 @@ body.preview-mode .fallback-overlay-box h3 {
 
 /* People Names */
 .fallback-overlay-box h3 {
-    font-size: 1.3rem;
+    font-size: 1.5rem;
     margin-top: auto;
     margin-bottom: 0;
     padding-top: 30px; /* este valor vai empurrar o h3 mais para baixo */
